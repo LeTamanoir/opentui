@@ -51,8 +51,6 @@ export class InputRenderable extends TextareaRenderable {
   private _type: "text" | "password"
   private _passwordChar: string
 
-  private static readonly DEFAULT_PASSWORD_CHAR = "●"
-
   // Only specify defaults that differ from TextareaRenderable/EditBufferRenderable
   private static readonly defaultOptions = {
     // Different from Textarea's null
@@ -61,6 +59,7 @@ export class InputRenderable extends TextareaRenderable {
     maxLength: 1000,
     value: "",
     type: "text" as const,
+    passwordChar: "●",
   } satisfies Partial<InputRenderableOptions>
 
   constructor(ctx: RenderContext, options: InputRenderableOptions) {
@@ -88,7 +87,7 @@ export class InputRenderable extends TextareaRenderable {
     this._maxLength = maxLength
     this._lastCommittedValue = this.plainText
     this._type = options.type ?? defaults.type
-    this._passwordChar = options.passwordChar ?? InputRenderable.DEFAULT_PASSWORD_CHAR
+    this._passwordChar = options.passwordChar ?? InputRenderable.defaultOptions.passwordChar
 
     if (this._type === "password") {
       this.applyMask()
@@ -278,7 +277,7 @@ export class InputRenderable extends TextareaRenderable {
   }
 
   public set passwordChar(value: string | null | undefined) {
-    const char = value ?? InputRenderable.DEFAULT_PASSWORD_CHAR
+    const char = value ?? InputRenderable.defaultOptions.passwordChar
     if (this._passwordChar !== char) {
       this._passwordChar = char
       if (this._type === "password") {
