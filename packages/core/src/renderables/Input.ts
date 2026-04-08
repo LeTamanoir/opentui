@@ -21,9 +21,9 @@ export interface InputRenderableOptions extends Omit<
   maxLength?: number
   /** Placeholder text (Input only supports string, not StyledText) */
   placeholder?: string
-  /** Input type - "password" masks displayed characters */
+  /** Input type ("text" or "password") */
   type?: "text" | "password"
-  /** Character used to mask input when type is "password". Defaults to "●" */
+  /** Character used to mask input when type is "password" */
   passwordChar?: string | null
 }
 
