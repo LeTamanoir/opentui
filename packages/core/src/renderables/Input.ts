@@ -21,6 +21,10 @@ export interface InputRenderableOptions extends Omit<
   maxLength?: number
   /** Placeholder text (Input only supports string, not StyledText) */
   placeholder?: string
+  /** Input type - "password" masks displayed characters */
+  type?: "text" | "password"
+  /** Character used to mask input when type is "password". Defaults to "●" */
+  passwordChar?: string | null
 }
 
 // TODO: make this just plain strings instead of an enum (same for other events)
@@ -44,6 +48,10 @@ export enum InputRenderableEvents {
 export class InputRenderable extends TextareaRenderable {
   private _maxLength: number
   private _lastCommittedValue: string = ""
+  private _type: "text" | "password"
+  private _passwordChar: string
+
+  private static readonly DEFAULT_PASSWORD_CHAR = "●"
 
   // Only specify defaults that differ from TextareaRenderable/EditBufferRenderable
   private static readonly defaultOptions = {
@@ -52,6 +60,7 @@ export class InputRenderable extends TextareaRenderable {
     // Input-specific
     maxLength: 1000,
     value: "",
+    type: "text" as const,
   } satisfies Partial<InputRenderableOptions>
 
   constructor(ctx: RenderContext, options: InputRenderableOptions) {
@@ -78,11 +87,22 @@ export class InputRenderable extends TextareaRenderable {
 
     this._maxLength = maxLength
     this._lastCommittedValue = this.plainText
+    this._type = options.type ?? defaults.type
+    this._passwordChar = options.passwordChar ?? InputRenderable.DEFAULT_PASSWORD_CHAR
+
+    if (this._type === "password") {
+      this.applyMask()
+    }
 
     // Set cursor to end of initial value
     if (initialValue) {
       this.cursorOffset = initialValue.length
     }
+  }
+
+  private applyMask(): void {
+    const codepoint = this._passwordChar.codePointAt(0) ?? 0
+    this.editorView.setMaskCodepoint(this._type === "password" ? codepoint : 0)
   }
 
   /**
@@ -239,6 +259,33 @@ export class InputRenderable extends TextareaRenderable {
   public override get placeholder(): string {
     const p = super.placeholder
     return typeof p === "string" ? p : ""
+  }
+
+  public get type(): "text" | "password" {
+    return this._type
+  }
+
+  public set type(value: "text" | "password") {
+    if (this._type !== value) {
+      this._type = value
+      this.applyMask()
+      this.requestRender()
+    }
+  }
+
+  public get passwordChar(): string {
+    return this._passwordChar
+  }
+
+  public set passwordChar(value: string | null | undefined) {
+    const char = value ?? InputRenderable.DEFAULT_PASSWORD_CHAR
+    if (this._passwordChar !== char) {
+      this._passwordChar = char
+      if (this._type === "password") {
+        this.applyMask()
+        this.requestRender()
+      }
+    }
   }
 
   public override set initialValue(value: string) {

@@ -2,6 +2,7 @@ import { describe, expect, it, afterAll, beforeAll } from "bun:test"
 import { InputRenderable, type InputRenderableOptions, InputRenderableEvents } from "./Input.js"
 import { decodePasteBytes } from "../lib/paste.js"
 import { createTestRenderer } from "../testing/test-renderer.js"
+import { OptimizedBuffer } from "../buffer.js"
 import type { KeyEvent } from "../lib/KeyHandler.js"
 
 const { renderer, mockInput } = await createTestRenderer({})
@@ -1223,6 +1224,148 @@ describe("InputRenderable", () => {
       // Ctrl+Down should move to end
       mockInput.pressArrow("down", { ctrl: true })
       expect(input.cursorOffset).toBe(5)
+    })
+  })
+
+  describe("Password Input", () => {
+    function getCharAt(buffer: OptimizedBuffer, x: number, y: number): number {
+      return buffer.buffers.char[y * buffer.width + x] ?? 0
+    }
+
+    it("should return real value from plainText, not masked", () => {
+      const { input } = createInputRenderable({
+        width: 20,
+        height: 1,
+        type: "password",
+        value: "secret",
+      })
+
+      expect(input.plainText).toBe("secret")
+      expect(input.value).toBe("secret")
+    })
+
+    it("should render masked characters in output", () => {
+      const { input } = createInputRenderable({
+        width: 20,
+        height: 1,
+        type: "password",
+        value: "abc",
+      })
+
+      const buffer = OptimizedBuffer.create(20, 1, "wcwidth")
+      buffer.drawEditorView(input.editorView, 0, 0)
+
+      const maskCp = "●".codePointAt(0)!
+      expect(getCharAt(buffer, 0, 0)).toBe(maskCp)
+      expect(getCharAt(buffer, 1, 0)).toBe(maskCp)
+      expect(getCharAt(buffer, 2, 0)).toBe(maskCp)
+
+      buffer.destroy()
+    })
+
+    it("should handle backspace correctly", () => {
+      const { input } = createInputRenderable({
+        width: 20,
+        height: 1,
+        type: "password",
+        value: "abc",
+      })
+
+      input.focus()
+      input.deleteCharBackward()
+      expect(input.plainText).toBe("ab")
+      expect(input.cursorOffset).toBe(2)
+    })
+
+    it("should maintain correct cursor position after typing", () => {
+      const { input } = createInputRenderable({
+        width: 20,
+        height: 1,
+        type: "password",
+      })
+
+      input.focus()
+      input.insertText("hello")
+      expect(input.cursorOffset).toBe(5)
+      expect(input.plainText).toBe("hello")
+    })
+
+    it("should not mask placeholder text", () => {
+      const { input } = createInputRenderable({
+        width: 20,
+        height: 1,
+        type: "password",
+        placeholder: "type password...",
+      })
+
+      const buffer = OptimizedBuffer.create(20, 1, "wcwidth")
+      buffer.drawEditorView(input.editorView, 0, 0)
+
+      // Placeholder "t" should render as "t", not as the mask character
+      expect(getCharAt(buffer, 0, 0)).toBe("t".codePointAt(0)!)
+
+      buffer.destroy()
+    })
+
+    it("should use custom passwordChar", () => {
+      const { input } = createInputRenderable({
+        width: 20,
+        height: 1,
+        type: "password",
+        passwordChar: "*",
+        value: "abc",
+      })
+
+      const buffer = OptimizedBuffer.create(20, 1, "wcwidth")
+      buffer.drawEditorView(input.editorView, 0, 0)
+
+      expect(getCharAt(buffer, 0, 0)).toBe("*".codePointAt(0)!)
+      expect(getCharAt(buffer, 1, 0)).toBe("*".codePointAt(0)!)
+
+      buffer.destroy()
+    })
+
+    it("should not mask when type is text", () => {
+      const { input } = createInputRenderable({
+        width: 20,
+        height: 1,
+        type: "text",
+        value: "abc",
+      })
+
+      const buffer = OptimizedBuffer.create(20, 1, "wcwidth")
+      buffer.drawEditorView(input.editorView, 0, 0)
+
+      expect(getCharAt(buffer, 0, 0)).toBe("a".codePointAt(0)!)
+      expect(getCharAt(buffer, 1, 0)).toBe("b".codePointAt(0)!)
+
+      buffer.destroy()
+    })
+
+    it("should toggle masking when type changes", () => {
+      const { input } = createInputRenderable({
+        width: 20,
+        height: 1,
+        value: "abc",
+      })
+
+      const buffer = OptimizedBuffer.create(20, 1, "wcwidth")
+
+      // Initially text
+      buffer.drawEditorView(input.editorView, 0, 0)
+      expect(getCharAt(buffer, 0, 0)).toBe("a".codePointAt(0)!)
+
+      // Switch to password
+      input.type = "password"
+      buffer.drawEditorView(input.editorView, 0, 0)
+      expect(getCharAt(buffer, 0, 0)).toBe("●".codePointAt(0)!)
+
+      // Switch back to text
+      input.type = "text"
+      buffer.drawEditorView(input.editorView, 0, 0)
+      expect(getCharAt(buffer, 0, 0)).toBe("a".codePointAt(0)!)
+
+      buffer.destroy()
     })
   })
 })
