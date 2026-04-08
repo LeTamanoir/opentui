@@ -24,7 +24,7 @@ export interface InputRenderableOptions extends Omit<
   /** Input type ("text" or "password") */
   type?: "text" | "password"
   /** Character used to mask input when type is "password" */
-  passwordChar?: string | null
+  passwordChar?: string
 }
 
 // TODO: make this just plain strings instead of an enum (same for other events)
@@ -87,7 +87,11 @@ export class InputRenderable extends TextareaRenderable {
     this._maxLength = maxLength
     this._lastCommittedValue = this.plainText
     this._type = options.type ?? defaults.type
-    this._passwordChar = options.passwordChar ?? InputRenderable.defaultOptions.passwordChar
+    if (options.passwordChar) {
+      this._passwordChar = InputRenderable.validatePasswordChar(options.passwordChar)
+    } else {
+      this._passwordChar = defaults.passwordChar
+    }
 
     if (this._type === "password") {
       this.applyMask()
@@ -99,8 +103,19 @@ export class InputRenderable extends TextareaRenderable {
     }
   }
 
+  private static validatePasswordChar(value: string): string {
+    if (value.length !== 1) {
+      console.warn(
+        `Invalid passwordChar "${value}", falling back to "${InputRenderable.defaultOptions.passwordChar}". ` +
+        `passwordChar must be a single character.`
+      )
+      return InputRenderable.defaultOptions.passwordChar
+    }
+    return value
+  }
+
   private applyMask(): void {
-    const codepoint = this._passwordChar.codePointAt(0) ?? 0
+    const codepoint = this._passwordChar.codePointAt(0)!
     this.editorView.setMaskCodepoint(this._type === "password" ? codepoint : 0)
   }
 
@@ -276,8 +291,8 @@ export class InputRenderable extends TextareaRenderable {
     return this._passwordChar
   }
 
-  public set passwordChar(value: string | null | undefined) {
-    const char = value ?? InputRenderable.defaultOptions.passwordChar
+  public set passwordChar(value: string) {
+    const char = InputRenderable.validatePasswordChar(value)
     if (this._passwordChar !== char) {
       this._passwordChar = char
       if (this._type === "password") {

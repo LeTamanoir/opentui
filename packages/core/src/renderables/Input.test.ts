@@ -1342,6 +1342,25 @@ describe("InputRenderable", () => {
       buffer.destroy()
     })
 
+    it("should warn and fall back to default for invalid passwordChar", () => {
+      const warnings: string[] = []
+      const origWarn = console.warn
+      console.warn = (msg: string) => warnings.push(msg)
+
+      const { input } = createInputRenderable({
+        width: 20,
+        height: 1,
+        type: "password",
+        passwordChar: "**",
+        value: "abc",
+      })
+
+      expect(warnings.length).toBe(1)
+      expect(input.passwordChar).toBe("●")
+
+      console.warn = origWarn
+    })
+
     it("should toggle masking when type changes", () => {
       const { input } = createInputRenderable({
         width: 20,
