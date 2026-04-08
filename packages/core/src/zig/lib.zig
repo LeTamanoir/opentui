@@ -1525,6 +1525,10 @@ export fn editorViewSetTabIndicatorColor(view: *editor_view.EditorView, color: [
     view.setTabIndicatorColor(utils.f32PtrToRGBA(color));
 }
 
+export fn editorViewSetMaskCodepoint(view: *editor_view.EditorView, codepoint: u32) void {
+    view.setMaskCodepoint(if (codepoint == 0) null else codepoint);
+}
+
 export fn bufferDrawEditorView(
     bufferPtr: *buffer.OptimizedBuffer,
     viewPtr: *editor_view.EditorView,

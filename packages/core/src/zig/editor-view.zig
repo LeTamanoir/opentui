@@ -45,6 +45,7 @@ pub const EditorView = struct {
     placeholder_buffer: ?*UnifiedTextBuffer,
     placeholder_syntax_style: ?*ss.SyntaxStyle,
     placeholder_active: bool,
+    mask_codepoint: ?u32,
 
     // Memory management
     global_allocator: Allocator,
@@ -83,6 +84,7 @@ pub const EditorView = struct {
             .placeholder_buffer = null,
             .placeholder_syntax_style = null,
             .placeholder_active = false,
+            .mask_codepoint = null,
             .global_allocator = global_allocator,
         };
 
@@ -798,5 +800,14 @@ pub const EditorView = struct {
 
     pub fn getTabIndicatorColor(self: *const EditorView) ?tb.RGBA {
         return self.text_buffer_view.getTabIndicatorColor();
+    }
+
+    pub fn setMaskCodepoint(self: *EditorView, codepoint: ?u32) void {
+        self.mask_codepoint = codepoint;
+    }
+
+    pub fn getMaskCodepoint(self: *const EditorView) ?u32 {
+        if (self.placeholder_active) return null;
+        return self.mask_codepoint;
     }
 };

@@ -764,6 +764,10 @@ pub const UnifiedTextBufferView = struct {
         return self.tab_indicator_color;
     }
 
+    pub fn getMaskCodepoint(_: *const Self) ?u32 {
+        return null;
+    }
+
     pub fn setTruncate(self: *Self, truncate: bool) void {
         if (self.truncate != truncate) {
             self.truncate = truncate;

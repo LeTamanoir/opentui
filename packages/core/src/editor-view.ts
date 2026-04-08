@@ -262,6 +262,11 @@ export class EditorView {
     this.lib.editorViewSetTabIndicatorColor(this.viewPtr, color)
   }
 
+  public setMaskCodepoint(codepoint: number): void {
+    this.guard()
+    this.lib.editorViewSetMaskCodepoint(this.viewPtr, codepoint)
+  }
+
   public measureForDimensions(width: number, height: number): { lineCount: number; widthColsMax: number } | null {
     this.guard()
     if (!this._textBufferViewPtr) {

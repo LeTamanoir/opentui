@@ -1495,7 +1495,9 @@ pub const OptimizedBuffer = struct {
                         }
                     } else {
                         var encoded_char: u32 = 0;
-                        if (grapheme_bytes.len == 1 and g_width == 1 and grapheme_bytes[0] >= 32) {
+                        if (view.getMaskCodepoint()) |mask_cp| {
+                            encoded_char = mask_cp;
+                        } else if (grapheme_bytes.len == 1 and g_width == 1 and grapheme_bytes[0] >= 32) {
                             encoded_char = @as(u32, grapheme_bytes[0]);
                         } else {
                             const gid = self.pool.alloc(grapheme_bytes) catch |err| {

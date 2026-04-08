@@ -1025,6 +1025,10 @@ function getOpenTUILib(libPath?: string) {
       args: ["ptr", "ptr"],
       returns: "void",
     },
+    editorViewSetMaskCodepoint: {
+      args: ["ptr", "u32"],
+      returns: "void",
+    },
 
     getArenaAllocatedBytes: {
       args: [],
@@ -1785,6 +1789,7 @@ export interface RenderLib {
   ) => void
   editorViewSetTabIndicator: (view: Pointer, indicator: number) => void
   editorViewSetTabIndicatorColor: (view: Pointer, color: RGBA) => void
+  editorViewSetMaskCodepoint: (view: Pointer, codepoint: number) => void
 
   bufferPushScissorRect: (buffer: Pointer, x: number, y: number, width: number, height: number) => void
   bufferPopScissorRect: (buffer: Pointer) => void
@@ -3828,6 +3833,10 @@ class FFIRenderLib implements RenderLib {
 
   public editorViewSetTabIndicatorColor(view: Pointer, color: RGBA): void {
     this.opentui.symbols.editorViewSetTabIndicatorColor(view, color.buffer)
+  }
+
+  public editorViewSetMaskCodepoint(view: Pointer, codepoint: number): void {
+    this.opentui.symbols.editorViewSetMaskCodepoint(view, codepoint)
   }
 
   public onNativeEvent(name: string, handler: (data: ArrayBuffer) => void): void {
