@@ -58,7 +58,7 @@ export class InputRenderable extends TextareaRenderable {
     // Input-specific
     maxLength: 1000,
     value: "",
-    type: "text" as const,
+    type: "text",
     passwordChar: "●",
   } satisfies Partial<InputRenderableOptions>
 
@@ -114,6 +114,9 @@ export class InputRenderable extends TextareaRenderable {
     return value
   }
 
+  // Note: the mask codepoint replaces each source character 1:1 in the renderer.
+  // This assumes the mask char and source characters share the same display width.
+  // For single-line password inputs (ASCII text, single-width mask) this is correct.
   private applyMask(): void {
     const codepoint = this._passwordChar.codePointAt(0)!
     this.editorView.setMaskCodepoint(this._type === "password" ? codepoint : 0)

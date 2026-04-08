@@ -1347,18 +1347,20 @@ describe("InputRenderable", () => {
       const origWarn = console.warn
       console.warn = (msg: string) => warnings.push(msg)
 
-      const { input } = createInputRenderable({
-        width: 20,
-        height: 1,
-        type: "password",
-        passwordChar: "**",
-        value: "abc",
-      })
+      try {
+        const { input } = createInputRenderable({
+          width: 20,
+          height: 1,
+          type: "password",
+          passwordChar: "**",
+          value: "abc",
+        })
 
-      expect(warnings.length).toBe(1)
-      expect(input.passwordChar).toBe("●")
-
-      console.warn = origWarn
+        expect(warnings.length).toBe(1)
+        expect(input.passwordChar).toBe("●")
+      } finally {
+        console.warn = origWarn
+      }
     })
 
     it("should toggle masking when type changes", () => {
