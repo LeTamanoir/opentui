@@ -1,10 +1,10 @@
-import { describe, expect, it, afterAll, beforeAll } from "bun:test"
+import { describe, expect, it, afterAll, afterEach, beforeAll, beforeEach } from "bun:test"
 import { InputRenderable, type InputRenderableOptions, InputRenderableEvents } from "./Input.js"
 import { decodePasteBytes } from "../lib/paste.js"
 import { createTestRenderer } from "../testing/test-renderer.js"
 import type { KeyEvent } from "../lib/KeyHandler.js"
 
-const { renderer, mockInput } = await createTestRenderer({})
+const { renderer, mockInput, renderOnce, captureCharFrame } = await createTestRenderer({})
 
 function createInputRenderable(options: InputRenderableOptions): { input: InputRenderable; root: any } {
   if (!renderer) {
@@ -1024,6 +1024,141 @@ describe("InputRenderable", () => {
 
       mockInput.pressArrow("right")
       expect(input.cursorOffset).toBe(0)
+    })
+  })
+
+  describe("Mask", () => {
+    let maskRenderer: Awaited<ReturnType<typeof createTestRenderer>>
+
+    beforeEach(async () => {
+      maskRenderer = await createTestRenderer({ width: 40, height: 3 })
+    })
+
+    afterEach(() => {
+      maskRenderer.renderer.destroy()
+    })
+
+    function createMaskedInput(options: InputRenderableOptions) {
+      const input = new InputRenderable(maskRenderer.renderer, options)
+      maskRenderer.renderer.root.add(input)
+      maskRenderer.renderer.requestRender()
+      return input
+    }
+
+    it("should render mask characters instead of real text", async () => {
+      const input = createMaskedInput({ width: 20, value: "secret", mask: "*" })
+
+      input.focus()
+      await maskRenderer.renderOnce()
+      const frame = maskRenderer.captureCharFrame()
+
+      expect(frame).toContain("******")
+      expect(frame).not.toContain("secret")
+    })
+
+    it("should keep real value accessible via .value", () => {
+      const input = createMaskedInput({ width: 20, value: "password", mask: "•" })
+      expect(input.value).toBe("password")
+    })
+
+    it("should render mask for typed characters", async () => {
+      const input = createMaskedInput({ width: 20, mask: "*" })
+
+      input.focus()
+      maskRenderer.mockInput.pressKey("a")
+      maskRenderer.mockInput.pressKey("b")
+      maskRenderer.mockInput.pressKey("c")
+
+      await maskRenderer.renderOnce()
+      const frame = maskRenderer.captureCharFrame()
+
+      expect(frame).toContain("***")
+      expect(frame).not.toContain("abc")
+      expect(input.value).toBe("abc")
+    })
+
+    it("should emit real value in events", () => {
+      const input = createMaskedInput({ width: 20, mask: "•" })
+
+      input.focus()
+
+      const inputValues: string[] = []
+      input.on(InputRenderableEvents.INPUT, (value: string) => {
+        inputValues.push(value)
+      })
+
+      maskRenderer.mockInput.pressKey("x")
+      maskRenderer.mockInput.pressKey("y")
+
+      expect(inputValues).toEqual(["x", "xy"])
+    })
+
+    it("should emit real value on enter", () => {
+      const input = createMaskedInput({ width: 20, value: "secret", mask: "•" })
+
+      input.focus()
+
+      let enterValue = ""
+      input.on(InputRenderableEvents.ENTER, (value: string) => {
+        enterValue = value
+      })
+
+      maskRenderer.mockInput.pressEnter()
+      expect(enterValue).toBe("secret")
+    })
+
+    it("should handle backspace correctly with mask", async () => {
+      const input = createMaskedInput({ width: 20, value: "abc", mask: "*" })
+
+      input.focus()
+      maskRenderer.mockInput.pressBackspace()
+
+      expect(input.value).toBe("ab")
+
+      await maskRenderer.renderOnce()
+      const frame = maskRenderer.captureCharFrame()
+      expect(frame).toContain("**")
+    })
+
+    it("should use custom mask character", async () => {
+      const input = createMaskedInput({ width: 20, value: "test", mask: "#" })
+
+      input.focus()
+      await maskRenderer.renderOnce()
+      const frame = maskRenderer.captureCharFrame()
+
+      expect(frame).toContain("####")
+      expect(frame).not.toContain("test")
+    })
+
+    it("should toggle mask dynamically", async () => {
+      const input = createMaskedInput({ width: 20, value: "hello" })
+
+      input.focus()
+      await maskRenderer.renderOnce()
+      let frame = maskRenderer.captureCharFrame()
+      expect(frame).toContain("hello")
+
+      input.mask = "*"
+      await maskRenderer.renderOnce()
+      frame = maskRenderer.captureCharFrame()
+      expect(frame).toContain("*****")
+      expect(frame).not.toContain("hello")
+
+      input.mask = undefined
+      await maskRenderer.renderOnce()
+      frame = maskRenderer.captureCharFrame()
+      expect(frame).toContain("hello")
+    })
+
+    it("should show placeholder when masked input is empty", async () => {
+      const input = createMaskedInput({ width: 20, mask: "*", placeholder: "Enter password" })
+
+      input.focus()
+      await maskRenderer.renderOnce()
+      const frame = maskRenderer.captureCharFrame()
+
+      expect(frame).toContain("Enter password")
     })
   })
 

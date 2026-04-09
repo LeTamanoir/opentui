@@ -1,6 +1,7 @@
 import type { PasteEvent } from "../lib/KeyHandler.js"
 import { decodePasteBytes, stripAnsiSequences } from "../lib/paste.js"
 import type { RenderContext } from "../types.js"
+import type { OptimizedBuffer } from "../buffer.js"
 import {
   TextareaRenderable,
   type TextareaOptions,
@@ -21,6 +22,8 @@ export interface InputRenderableOptions extends Omit<
   maxLength?: number
   /** Placeholder text (Input only supports string, not StyledText) */
   placeholder?: string
+  /** Mask character (when set, input is masked like a password field) */
+  mask?: string
 }
 
 // TODO: make this just plain strings instead of an enum (same for other events)
@@ -44,6 +47,7 @@ export enum InputRenderableEvents {
 export class InputRenderable extends TextareaRenderable {
   private _maxLength: number
   private _lastCommittedValue: string = ""
+  private _mask: string | undefined
 
   // Only specify defaults that differ from TextareaRenderable/EditBufferRenderable
   private static readonly defaultOptions = {
@@ -77,12 +81,36 @@ export class InputRenderable extends TextareaRenderable {
     })
 
     this._maxLength = maxLength
+    this._mask = options.mask
     this._lastCommittedValue = this.plainText
 
     // Set cursor to end of initial value
     if (initialValue) {
       this.cursorOffset = initialValue.length
     }
+  }
+
+  protected override renderSelf(buffer: OptimizedBuffer): void {
+    // Always let drawEditorView handle background fill, placeholder, and scrolling
+    super.renderSelf(buffer)
+
+    if (!this._mask || this.plainText.length === 0) return
+
+    // Overwrite the visible text cells with mask characters
+    const viewport = this.editorView.getViewport()
+    const visibleCount = Math.max(0, Math.min(this.plainText.length - viewport.offsetX, this.width))
+    if (visibleCount > 0) {
+      buffer.drawText(this._mask.repeat(visibleCount), this.x, this.y, this._textColor, this._backgroundColor)
+    }
+  }
+
+  public get mask(): string | undefined {
+    return this._mask
+  }
+
+  public set mask(mask: string | undefined) {
+    this._mask = mask
+    this.requestRender()
   }
 
   /**
